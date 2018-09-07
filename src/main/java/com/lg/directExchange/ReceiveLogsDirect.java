@@ -19,6 +19,8 @@ public class ReceiveLogsDirect {
 	      connectionFactory.setVirtualHost("/");
 	      Connection connection = connectionFactory.newConnection();
 	      Channel channel = connection.createChannel();
-	      channel.exchangeDeclare(EXCHANGE_NAME, "derict");
+	      channel.exchangeDeclare(EXCHANGE_NAME, "direct");
+	      String queuename = channel.queueDeclare().getQueue();
+	      
 	}
 }
