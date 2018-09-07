@@ -1,0 +1,214 @@
+
+1	Rabbit安装配置	3
+1.1	安装环境	3
+1.2	组件列表	3
+1.3	安装过程	4
+1.3.1	离线安装	4
+1.3.2	在线安装	5
+1.3.3	启动服务	6
+1.4	常规管理	7
+1.4.1	Web页面管理	7
+1.4.1.1	创建登陆用户	8
+1.4.1.2	访问登陆页面	8
+1.4.2	命令行	9
+1.5	集群配置	10
+1.5.1	准备工作	10
+1.5.2	配置过程	11
+2	Haproxy 安装配置	12
+2.1	安装过程	12
+2.1.1	在线安装	12
+2.1.2	离线安装	12
+2.2	配置管理	13
+2.2.1	日志配置	13
+2.2.2	RabbitMQ代理	13
+2.2.3	启动Haproxy	15
+ 
+1	Rabbit安装配置
+1.1	安装环境
+安装软件： RabbitMQ-Server-3.7.2
+操作系统： RedHat Linux 7  或 CentOS  Linux 7
+1.2	组件列表
+下表中的所列组件为“基于RPM离线安装”方式中所需组件，可以通过浏览器在安装之前下载。
+组件名称	版本信息	组件说明
+rabbitmq-server-3.7.2-1.el7.noarch.rpm	3.7.2	分布式消息服务组件
+erlang-19.3.6-1.el7.centos.x86_64.rpm	19.3.x及以上	Erlang语言的最小化零依赖包，可以支持rabbitmq的正常运行
+(1)	RabbitMQ包下载地址：
+https://dl.bintray.com/rabbitmq/all/rabbitmq-server/3.7.2/rabbitmq-server-3.7.2-1.el7.noarch.rpm
+(2)	Erlang 包下载地址：
+https://dl.bintray.com/rabbitmq/rpm/erlang/19/el/7/x86_64/erlang-19.3.6-1.el7.centos.x86_64.rpm
+1.3	安装过程
+RabbitMQ的在Linux系统上常见的安装方式包括“离线安装”和“在线安装”方
+式两种，离线安装又包括“源码安装”和“RPM包安装”两种方式。在线安装方式是比较方便的一种安装方式，yum 命令可以自行解决安装组件的所有依赖，唯一的缺点是服务器需要 连接外网，而生产环境一般不具备此条件，所以这种方式仅适合研发环境。源码安装要对下载的源文件进行环境依赖检测后才能编译、安装，此过程较为繁琐；通过大量的资料查阅，RabbitMQ官网提供了一种“基于RPM包”的简单安装方式，在此方式下ErLang的rpm包零依赖任何组件的最小化安装包，但是可以支撑RabbitMQ组件的正常运行，有利于在生产环境下离线安装RabbitMQ服务，本文重点说明此安装方式和在线安装的过程。
+1.3.1	离线安装	
+基于RPM包的安装方式在RedHat Linux 7和CentOS  Linux 7上分别进行了测试，执行命令格式基本一致，采用root用户进行安装过程如下：
+(1)	上传rpm文件
+通过ftp工具将rabbitmq-server-3.7.2-1.el7.noarch.rpm和erlang-19.3.6-1.el7.Centos
+.x86_64.rpm上传到服务器的指定目录（/home/omcr/software）。
+(2) 安装erlang语言包
+切换到rpm的存放目录，执行命令：
+rpm  -ivh  erlang-19.3.6-1.el7.Centos.x86_64.rpm
+结果如下：
+ 
+结果表明erlarng最小包安装成功。
+（3）安装rabbitmq服务
+切换到rpm的存放目录，执行命令：
+rpm  -ivh  rabbitmq-server-3.7.2-1.el7.noarch.rpm
+      结果如下：
+ 
+上述过程中提示rabbitmq安装失败，失败原因缺少socat依赖组件，此组件可以在RedHat或CentOS 的安装镜像的Packages包中找到，执行如下命令：
+rpm  -ivh  socat-1.7.2.2-5.el7.x86_64.rpm
+结果如下：
+ 
+重新执行rpm  -ivh  rabbitmq-server-3.7.2-1.el7.noarch.rpm，结果如下：
+ 
+到此rabbitmq安装成功。
+
+1.3.2	在线安装
+   由于RabbitMQ和Erlang组件的仓库地址在Linux操作系统yum地址仓库中不存在，所以在线安装之前必须创建专属仓库地址，用于yum命令下载远程组件，采用root用户进行安装步骤如下：
+(1)	创建仓库地址
+使用vi命令在/etc/yum.repos.d/目录下创建rabbitmq-erlang.repo文件，文件内容如下：
+[rabbitmq-erlang]
+name=rabbitmq-erlang
+baseurl=https://dl.bintray.com/rabbitmq/rpm/erlang/19/el/7
+gpgcheck=1
+gpgkey=https://dl.bintray.com/rabbitmq/Keys/rabbitmq-release-signing-key.asc
+repo_gpgcheck=0
+enabled=1
+保存退出。
+(2)	安装erlang
+执行命令yum  -y install erlang
+(3)	安装rabbitmq-server服务
+执行命令 yum  -y install  rabbitmq-server
+1.3.3	启动服务
+RabbitMQ安装成功后，首次启动之前将RabbitMQ加入到linux的系统后台服务中，执行命令： chkconfig    rabbitmq-server  on
+结果如下：
+ 
+ 启动rabbitmq-server服务，执行如下命令
+   Systemctl    start  rabbitmq-server
+等待3-4秒之后无错误说明服务启动成功，执行如下命令查看rabbitmq-server的状态。
+    Systemctl    status  rabbitmq-server
+结果中active（running）说明rabbitmq服务运行正常，结果如下：
+ 
+
+1.4	常规管理
+1.4.1	Web页面管理
+登陆web管理页面之前必须执行如下命令启用监控管理插件，否则提示web页面无法访问。
+rabbitmq-plugins enable rabbitmq_management
+结果如下说明插件安装成功。
+ 
+1.4.1.1	创建登陆用户
+Rabbitmq-server服务首次启动成功后，服务中只存在guest一个用户，guest用户只能通过localhost登陆使用，所以若是使用ip地址远端登陆的rabbitmq服务器的管理页面需要新建一个用户，并且新用户需要赋予超级管理员(administrator)权限。
+(1)	新增用户，执行如下命令：
+rabbitmqctl  add_user  test  abcd.1234
+(2)	用户设置管理员角色，执行如下命令：
+rabbitmqctl set_user_tags test administrator
+(3)	查看用户，执行如下命令：
+rabbitmqctl  list_users
+结果如下，说明test用户已经创建成功且具有管理员权限。
+ 
+1.4.1.2	 访问登陆页面
+   创建登陆用户成功后，就可以通过浏览器访问Web管理页面，访问地址一般为如下格式：
+http://ip:15672，登陆成功的页面如下：
+ 
+使用新建的test进行登陆，成功后的页面如下：
+ 
+1.4.2	命令行
+Rabbitmq服务器的主要通过rabbitmqctl和rabbimq-plugins两个命令行工具来管理，以下是一些常用功能。
+(1)	插件管理
+	开启某个插件：rabbitmq-plugins enable  xxx
+	关闭某个插件：rabbitmq-plugins disable  xxx
+(2)	虚拟机管理
+	新建virtual_host: rabbitmqctladd_ vhost    xxx
+	撤销virtual_host:rabbitmqctl   delete_vhost  xxx
+(3)	用户管理
+	新建用户：   rabbitmqctl  add_user  xxx  pwd
+	删除用户:          rabbitmqctl   delete_user   xxx
+	修改密码:         rabbimqctl  change_password  username newpassword
+	查看当前用户列表：rabbitmqctl  list_users
+(4)	  设置用户角色
+命令：rabbitmqctl  set_user_tags  username   tag ...
+            Tag可以为 administrator，monitoring， management，policymaker
+rabbitmq用户角色可分为五类：超级管理员, 监控者, 策略制定者, 普通管理者以及其他
+	超级管理员(administrator)
+可登陆管理控制台可查看所有的信息，并且可以对用户，策略(policy)进行操
+作。
+	监控者(monitoring)
+可登陆管理控制台，同时可以查看rabbitmq节点的相关信息(进程数，内存使
+用情况，磁盘使用情况等) 
+	 策略制定者(policymaker)
+可登陆管理控制台， 同时可以对policy进行管理。
+	普通管理者(management)
+仅可登陆管理控制台，无法看到节点信息，也无法对策略进行管理。
+	其他的
+无法登陆管理控制台，通常就是普通的生产者和消费者
+
+1.5	集群配置
+1.5.1	准备工作
+  （1）配置节点 /etc/hosts文件
+ 
+如上为rabbitmq服务的所有集群节点列表，配置时必须在每台节点上配置此信息，Ip地址和机器名称根据实际情况而定。
+（2）设置Cookie一致性
+RabbitMQ 集群通过 /var/lib/rabbitmq/.erlang.cookie 内的 cookie 值来确认各节点是否在同一个集群，设置不同节点间同一认证的Erlang Cookie 用从主节点copy的方式保持Cookie的一致性，如下命令
+scp/var/lib/rabbitmq/.erlang.cookie 192.168.130.212:/var/lib/rabbitmq
+1.5.2	配置过程
+（1）使用 -detached运行各节点
+rabbitmqctl  stop_app
+rabbitmq-server -detached 
+（2）查看各节点的状态
+rabbitmqctl cluster_status
+rabbitmqctl cluster_status
+rabbitmqctl cluster_status
+（3）创建并部署集群，以test节点加入bogon为例，在test节点上执行如下命令
+rabbitmqctl stop_app
+rabbitmqctl join_cluster rabbit@bogon
+rabbitmqctl start_app
+（4）查看集群状态
+rabbitmqctl cluster_status
+ 
+上述信息说明rabbit集群中包括bogon和test两个节点。
+2	Haproxy 安装配置
+Haproxy是免费、极速且可靠的用于为TCP和基于HTTP应用程序提供高可用、负载均衡和代理服务的解决方案，本文中Haproxy用于RabbitMQ集群做负载均衡和高可用代理服务。
+2.1	安装过程
+2.1.1	在线安装
+Haproxy在Linux操作系统上可以使用yum进行安装，安装命令为：
+yum -y install haproxy
+安装完成之后，可以使用命令haproxy -h 查看haproxy的用法。
+2.1.2	离线安装
+离线使用源码包进行安装，软件包可以在官http://www.haproxy.org/ 进行下载，本文使用版本为1.5.18，操作过程如下 ：
+tar –zxf  haproxy-1.5.18.tar.gz 
+
+cd   haproxy-1.5.18   
+uname -r        #查看系统内核版本号
+3.10.0-229.el7.x86_64
+
+ make TARGET=linux3100
+
+ make install
+安装完成之后，可以使用命令haproxy -h 查看haproxy的用法。
+
+2.2	配置管理
+Haproxy服务的默认配置文件/etc/haproxy/haproxy.cfg
+2.2.1	日志配置
+配置syslog
+ 
+开启UDP 514 端口
+ 
+设置haproxy日志存放目录
+ 
+重启rsyslog服务 
+Systemctl  restart   rsyslog
+2.2.2	RabbitMQ代理 
+(1)	全局配置：日志存储、最大连接等
+ 
+(2)	default默认配置
+ 
+(3)	rabbitmq前段和后段
+ 
+
+Backend 段为rabbitMq集群节点列表和负载策略，frontend段为客户端访问代理、的地址和端口 。
+2.2.3	启动Haproxy
+启动 Haproxy服务之前必须先检查/etc/haproxy/haproxy.cfg语法，命令如下：
+Haproxy  -f  haproxy.cfg
+如果无任何输出，代表配置信息正确，启动服务命令如下：
+  Systemctl  start  haproxy
+启动成功时显示如下信息：
